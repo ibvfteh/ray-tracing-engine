@@ -1,0 +1,13 @@
+#define VK_ENABLE_BETA_EXTENSIONS
+#include <vulkan/vulkan.h>
+#include <optional>
+#include <set>
+#include <vector>
+#include <memory>
+#include <array>
+#include <string>
+#include <cstring>
+#include <functional>
+#include <cstdint>
+#include <map>
+#include <unordered_map>

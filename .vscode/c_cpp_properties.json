@@ -1,0 +1,51 @@
+{
+    "configurations": [
+        {
+            "name": "Win64",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/estun/src",
+                "${workspaceFolder}/estun/dependencies/glfw/include",
+                "${workspaceFolder}/estun/dependencies/glm",
+                "${workspaceFolder}/estun/dependencies/spdlog/include",
+                "${workspaceFolder}/estun/dependencies/stbi",
+                "${workspaceFolder}/estun/dependencies/tinyobjloader",
+                "${workspaceFolder}/estun/dependencies/vulkan/include",
+                "${workspaceFolder}/estun/src"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.17763.0",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Enterprise/VC/Tools/MSVC/14.16.27023/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64",
+            "configurationProvider": "vector-of-bool.cmake-tools"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/estun/src",
+                "${workspaceFolder}/estun/dependencies/glfw/include",
+                "${workspaceFolder}/estun/dependencies/glm",
+                "${workspaceFolder}/estun/dependencies/spdlog/include",
+                "${workspaceFolder}/estun/dependencies/stbi",
+                "${workspaceFolder}/estun/dependencies/tinyobjloader",
+                "/usr/include/x86_64-linux-gnu/c++/9",
+                "${workspaceFolder}/estun/src",
+                "${workspaceFolder}/estun/dependencies/vulkan/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x86",
+            "configurationProvider": "vector-of-bool.cmake-tools"
+        }
+    ],
+    "version": 4
+}
