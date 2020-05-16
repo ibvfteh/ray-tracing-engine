@@ -119,13 +119,13 @@ int main(int argc, const char **argv)
     descriptorBindings.clear();
 
     std::shared_ptr<estun::RayTracingRender> render = context->CreateRayTracingRender();
-    /*
+
     std::shared_ptr<estun::RayTracingPipeline> pipeline = render->CreatePipeline(
         {{"assets/shaders/ray-closest-hit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
         {"assets/shaders/ray-generation.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
         {"assets/shaders/ray-miss.spv", VK_SHADER_STAGE_MISS_BIT_KHR}},
         descriptor);
-*/
+
     //std::shared_ptr<estun::ShaderBindingTable> shaderBindingTable = std::make_shared<estun::ShaderBindingTable>();
 
     while (!glfwWindowShouldClose(window->GetWindow()))
@@ -142,6 +142,8 @@ int main(int argc, const char **argv)
         context->SubmitDraw();
     }
 
+    pipeline.reset();
+    render.reset();
     context->Clear();
     UBs.clear();
     VB.reset();

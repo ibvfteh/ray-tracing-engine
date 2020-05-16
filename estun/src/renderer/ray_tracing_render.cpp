@@ -16,20 +16,20 @@ estun::RayTracingRender::~RayTracingRender()
 }
 
 std::shared_ptr<estun::RayTracingPipeline> estun::RayTracingRender::CreatePipeline(
-    const std::string computeShaderName,
+    const std::vector<Shader> shaders,
     const std::shared_ptr<Descriptor> descriptor)
 {
-    std::shared_ptr<RayTracingPipeline> pipeline = std::make_shared<RayTracingPipeline>(computeShaderName, descriptor);
+    std::shared_ptr<RayTracingPipeline> pipeline = std::make_shared<RayTracingPipeline>(shaders, descriptor);
     pipelines_.push_back(pipeline);
     return pipeline;
 }
 
-void estun::RayTracingRender::Start()
+void estun::RayTracingRender::BeginBuffer()
 {
     commandBuffers_->Begin(ContextLocator::GetImageIndex());
 }
 
-void estun::RayTracingRender::End()
+void estun::RayTracingRender::EndBuffer()
 {
     commandBuffers_->End(ContextLocator::GetImageIndex());
 }
@@ -39,17 +39,36 @@ void estun::RayTracingRender::Bind(std::shared_ptr<Descriptor> descriptor)
     descriptor->Bind(GetCurrCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
-void estun::RayTracingRender::Bind(std::shared_ptr<ComputePipeline> pipeline)
+void estun::RayTracingRender::Bind(std::shared_ptr<RayTracingPipeline> pipeline)
 {
     pipeline->Bind(GetCurrCommandBuffer());
 }
 
+void estun::RayTracingRender::CopyImage(std::shared_ptr<Image> image1, std::shared_ptr<Image> image2)
+{
+    image1->Barrier(
+        GetCurrCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    image2->Barrier(
+        GetCurrCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    image1->CopyTo(GetCurrCommandBuffer(), image2);
+    image1->Barrier(
+        GetCurrCommandBuffer(), VK_IMAGE_LAYOUT_GENERAL,
+        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    image2->Barrier(
+        GetCurrCommandBuffer(), VK_IMAGE_LAYOUT_GENERAL,
+        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+}
 
-VkCommandBuffer &estun::ComputeRender::GetCurrCommandBuffer()
+VkCommandBuffer &estun::RayTracingRender::GetCurrCommandBuffer()
 {
     return (*commandBuffers_)[ContextLocator::GetImageIndex()];
 }
-
 
 /*
 void estun::GraphicsRender::CreateRayTracingOutputImage()

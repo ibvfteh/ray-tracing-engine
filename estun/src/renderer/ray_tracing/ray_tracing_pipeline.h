@@ -23,7 +23,7 @@ namespace estun
 
         RayTracingPipeline(
             const std::vector<Shader> shaders,
-            const Descriptor &descriptor);
+            const std::shared_ptr<Descriptor> descriptor);
         ~RayTracingPipeline();
 
         void Bind(VkCommandBuffer &commandBuffer);

@@ -11,7 +11,7 @@
 
 estun::RayTracingPipeline::RayTracingPipeline(
     const std::vector<Shader> shaders,
-    const Descriptor &descriptor)
+    const std::shared_ptr<Descriptor> descriptor)
 {
     // Load shaders.
 
@@ -74,7 +74,13 @@ estun::RayTracingPipeline::RayTracingPipeline(
     pipelineInfo.groupCount = static_cast<uint32_t>(shaderGroups.size());
     pipelineInfo.pGroups = shaderGroups.data();
     pipelineInfo.maxRecursionDepth = 1;
-    pipelineInfo.layout = descriptor.GetPipelineLayout().GetPipelineLayout();
+    pipelineInfo.libraries = {};
+    pipelineInfo.libraries.sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
+    pipelineInfo.libraries.pNext = nullptr;
+    pipelineInfo.libraries.libraryCount = 0;
+    pipelineInfo.libraries.pLibraries = nullptr;
+    pipelineInfo.pLibraryInterface = nullptr;
+    pipelineInfo.layout = descriptor->GetPipelineLayout().GetPipelineLayout();
     pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.basePipelineIndex = 0;
 

@@ -36,25 +36,18 @@ namespace estun
 
         RayTracingRender();
         ~RayTracingRender();
-            
+
         std::shared_ptr<RayTracingPipeline> CreatePipeline(
-            const std::vector<Shader> shaders,  
+            const std::vector<Shader> shaders,
             const std::shared_ptr<Descriptor> descriptor);
 
-        void StartDrawInCurrent();
-        void RecordDrawInCurrent();
+        void BeginBuffer();
+        void EndBuffer();
 
-        template <class T>
-        void Bind(PushConstant<T> &pushConstant, std::shared_ptr<Descriptor> descriptor)
-        {
-            vkCmdPushConstants(
-                GetCurrCommandBuffer(),
-                descriptor->GetPipelineLayout().GetPipelineLayout(),
-                pushConstant.stageFlags_, 0,
-                sizeof(T), pushConstant.GetConst());
-        }
         void Bind(std::shared_ptr<Descriptor> descriptor);
-        void Bind(std::shared_ptr<GraphicsPipeline> pipeline);
+        void Bind(std::shared_ptr<RayTracingPipeline> pipeline);
+
+        void CopyImage(std::shared_ptr<Image> image1, std::shared_ptr<Image> image2);
 
         VkCommandBuffer &GetCurrCommandBuffer();
         std::vector<std::shared_ptr<RayTracingPipeline>> &GetPipelines() { return pipelines_; }
