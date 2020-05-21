@@ -41,8 +41,8 @@ public:
 	void GenerateMipmaps();
 
 	VkImage GetImage() const;
-	uint32_t GetWidth();
-	uint32_t GetHeight();
+	uint32_t GetWidth() const;
+	uint32_t GetHeight() const;
 	VkFormat GetFormat();
 	VkImageLayout GetLayout();
 	uint32_t GetMipLevels();

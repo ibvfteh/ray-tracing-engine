@@ -20,9 +20,10 @@ public:
 	void Unmap();
 
 	VkDeviceMemory GetMemory() const;
+	
+	static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 private:
-	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
 	VkDeviceMemory memory;
 };

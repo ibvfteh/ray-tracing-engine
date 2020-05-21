@@ -13,6 +13,6 @@
 #include "renderer/ray_tracing/bottom_level_acceleration_structure.h"
 #include "renderer/ray_tracing/bottom_level_acceleration_structure.h"
 #include "renderer/ray_tracing/top_level_acceleration_structure.h"
-#include "renderer/ray_tracing/shader_bilding_table.h"
+#include "renderer/ray_tracing/shader_binding_table.h"
 #include "renderer/ray_tracing/ray_tracing_pipeline.h"
 #include "renderer/ray_tracing/ray_tracing_properties.h"

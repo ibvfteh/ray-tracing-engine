@@ -57,7 +57,7 @@ VkDeviceMemory estun::DeviceMemory::GetMemory() const
 	return memory;
 }
 
-uint32_t estun::DeviceMemory::FindMemoryType(const uint32_t typeFilter, const VkMemoryPropertyFlags properties) const
+uint32_t estun::DeviceMemory::FindMemoryType(const uint32_t typeFilter, const VkMemoryPropertyFlags properties) 
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(DeviceLocator::GetPhysicalDevice(), &memProperties);

@@ -15,7 +15,7 @@
 #include "renderer/buffers/storage_buffer.h"
 #include "renderer/model.h"
 #include "renderer/ray_tracing/ray_tracing_pipeline.h"
-#include "renderer/ray_tracing/shader_bilding_table.h"
+#include "renderer/ray_tracing/shader_binding_table.h"
 #include "renderer/buffers/buffer.h"
 #include "renderer/context/base_image.h"
 #include "renderer/context/image_view.h"
@@ -46,6 +46,8 @@ namespace estun
 
         void Bind(std::shared_ptr<Descriptor> descriptor);
         void Bind(std::shared_ptr<RayTracingPipeline> pipeline);
+
+        void TraceRays(std::shared_ptr<ShaderBindingTable> sbtable, uint32_t width, uint32_t height);
 
         void CopyImage(std::shared_ptr<Image> image1, std::shared_ptr<Image> image2);
 

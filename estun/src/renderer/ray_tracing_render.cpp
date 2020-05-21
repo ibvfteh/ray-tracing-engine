@@ -44,6 +44,22 @@ void estun::RayTracingRender::Bind(std::shared_ptr<RayTracingPipeline> pipeline)
     pipeline->Bind(GetCurrCommandBuffer());
 }
 
+void estun::RayTracingRender::TraceRays(std::shared_ptr<ShaderBindingTable> sbtable, uint32_t width, uint32_t height)
+{
+    const VkStridedBufferRegionKHR raygenShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetRayGenOffset(), sbtable->GetRayGenEntrySize(), sbtable->GetSize()};
+    const VkStridedBufferRegionKHR missShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetMissOffset(), sbtable->GetMissEntrySize(), sbtable->GetSize()};
+    const VkStridedBufferRegionKHR hitShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetHitGroupOffset(), sbtable->GetHitGroupEntrySize(), sbtable->GetSize()};
+    const VkStridedBufferRegionKHR callableShaderBindingTable = {};
+
+    FunctionsLocator::GetFunctions().vkCmdTraceRaysKHR(
+        GetCurrCommandBuffer(),
+        &raygenShaderBindingTable,
+        &missShaderBindingTable,
+        &hitShaderBindingTable,
+        &callableShaderBindingTable,
+        width, height, 1);
+}
+
 void estun::RayTracingRender::CopyImage(std::shared_ptr<Image> image1, std::shared_ptr<Image> image2)
 {
     image1->Barrier(

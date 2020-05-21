@@ -14,8 +14,6 @@
 #include "renderer/material/pipeline_layout.h"
 #include "renderer/buffers/storage_buffer.h"
 #include "renderer/model.h"
-#include "renderer/ray_tracing/ray_tracing_pipeline.h"
-#include "renderer/ray_tracing/shader_bilding_table.h"
 #include "renderer/buffers/buffer.h"
 #include "renderer/context/base_image.h"
 #include "renderer/context/image_view.h"

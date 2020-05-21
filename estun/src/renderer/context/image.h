@@ -43,6 +43,7 @@ namespace estun
         const BaseImage &GetImage() const  { return *image_; }
         const std::unique_ptr<ImageView> &GetImageView() const { return imageView_; }
         const Sampler &GetSampler() const { return *sampler_; }
+        const VkImageLayout &GetLayout() const { return layout_; }
 
     protected:
         VkImageLayout layout_;

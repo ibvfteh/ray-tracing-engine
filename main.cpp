@@ -35,15 +35,29 @@ struct VertexUBO
     glm::mat4 projection;
     glm::mat4 modelViewInverse;
     glm::mat4 projectionInverse;
-	float aperture;
-	float focusDistance;
-	uint32_t totalNumberOfSamples;
-	uint32_t numberOfSamples;
-	uint32_t numberOfBounces;
-	uint32_t randomSeed;
-	uint32_t gammaCorrection; 
-	uint32_t hasSky; 
+    float aperture;
+    float focusDistance;
+    uint32_t totalNumberOfSamples;
+    uint32_t numberOfSamples;
+    uint32_t numberOfBounces;
+    uint32_t randomSeed;
+    uint32_t gammaCorrection;
+    uint32_t hasSky;
 };
+
+struct AccelerationMemory
+{
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    uint64_t memoryAddress = 0;
+    void *mappedPointer = nullptr;
+};
+
+typedef struct AccelerationMemory MappedBuffer;
+
+MappedBuffer shaderBindingTable = {};
+uint32_t shaderBindingTableSize = 0;
+uint32_t shaderBindingTableGroupCount = 3;
 
 int surface_size = 256;
 float surface_scale = 10.0f;
@@ -64,14 +78,14 @@ int main(int argc, const char **argv)
     estun::ContextLocator::Provide(context.get());
 
     VertexUBO ubo = {};
-	ubo.aperture = 0.5f;
-	ubo.focusDistance = 1.0f;
-	ubo.totalNumberOfSamples = 0;
-	ubo.numberOfSamples = 8;
-	ubo.numberOfBounces = 2;
-	ubo.randomSeed = 1;
-	ubo.gammaCorrection = false; 
-	ubo.hasSky = false; 
+    ubo.aperture = 0.5f;
+    ubo.focusDistance = 1.0f;
+    ubo.totalNumberOfSamples = 0;
+    ubo.numberOfSamples = 8;
+    ubo.numberOfBounces = 2;
+    ubo.randomSeed = 1;
+    ubo.gammaCorrection = false;
+    ubo.hasSky = false;
 
     std::vector<estun::UniformBuffer<VertexUBO>> UBs(context->GetSwapChain()->GetImageViews().size());
     std::vector<std::shared_ptr<estun::Model>> models;
@@ -112,8 +126,7 @@ int main(int argc, const char **argv)
 
     std::vector<estun::DescriptorBinding> descriptorBindings = {
         estun::DescriptorBinding::AccelerationStructure(0, tlas, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
-        estun::DescriptorBinding::StorageImage(1, storeImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR)
-    };
+        estun::DescriptorBinding::StorageImage(1, storeImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR)};
 
     std::shared_ptr<estun::Descriptor> descriptor = std::make_shared<estun::Descriptor>(descriptorBindings, context->GetSwapChain()->GetImageViews().size());
     descriptorBindings.clear();
@@ -121,12 +134,22 @@ int main(int argc, const char **argv)
     std::shared_ptr<estun::RayTracingRender> render = context->CreateRayTracingRender();
 
     std::shared_ptr<estun::RayTracingPipeline> pipeline = render->CreatePipeline(
-        {{"assets/shaders/ray-closest-hit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
-        {"assets/shaders/ray-generation.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-        {"assets/shaders/ray-miss.spv", VK_SHADER_STAGE_MISS_BIT_KHR}},
+        {{"assets/shaders/ray-generation.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
+         {"assets/shaders/ray-miss.spv", VK_SHADER_STAGE_MISS_BIT_KHR},
+         {"assets/shaders/ray-closest-hit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR}},
         descriptor);
+    std::vector<uint32_t> v = {0, 1, 2};
 
-    //std::shared_ptr<estun::ShaderBindingTable> shaderBindingTable = std::make_shared<estun::ShaderBindingTable>();
+    std::shared_ptr<estun::ShaderBindingTable> shaderBindingTable = std::make_shared<estun::ShaderBindingTable>(pipeline, v);
+
+    context->WriteBuffers([&]() {
+        render->BeginBuffer();
+        render->Bind(pipeline);
+        render->Bind(descriptor);
+        render->TraceRays(shaderBindingTable, storeImage->GetImage().GetWidth(), storeImage->GetImage().GetHeight());
+        context->CopyImageToSwapChain(render->GetCurrCommandBuffer(), storeImage);
+        render->EndBuffer();
+    });
 
     while (!glfwWindowShouldClose(window->GetWindow()))
     {
@@ -205,7 +228,6 @@ void scroll_callback(double xoffset, double yoffset)
 
 void mouse_button_callback(int button, int action, int mods)
 {
-
 }
 
 void framebuffer_size_callback(int width, int height)

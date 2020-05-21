@@ -41,8 +41,7 @@ namespace estun
               height_(height),
               vsync_(vsync),
               msaa_(msaa),
-              rayTracing_(rayTracing)
-              {};
+              rayTracing_(rayTracing){};
     };
 
     class Context
@@ -72,6 +71,12 @@ namespace estun
         std::shared_ptr<ComputeRender> CreateComputeRender();
         std::shared_ptr<RayTracingRender> CreateRayTracingRender();
 
+        void WriteBuffers(const std::function<void()> &action);
+
+        void CopyImageToSwapChain(
+            VkCommandBuffer &commandBuffer, 
+            std::shared_ptr<Image> image);
+
         //void CreateRayTracingOutputImage();
         //void DeleteRayTracingOutputImage();
 
@@ -87,6 +92,7 @@ namespace estun
         std::unique_ptr<Surface> surface_;
         std::unique_ptr<Device> device_;
         std::unique_ptr<DynamicFunctions> dynamicFunctions_;
+        std::unique_ptr<RayTracingProperties> rayTracingProperties_;
         std::unique_ptr<SwapChain> swapChain_;
         std::unique_ptr<CommandPool> graphicsCommandPool_;
         std::unique_ptr<CommandPool> computeCommandPool_;
@@ -95,6 +101,7 @@ namespace estun
         std::vector<Semaphore> imageAvailableSemaphores_;
         std::vector<Semaphore> renderFinishedSemaphores_;
         std::vector<Semaphore> computeFinishedSemaphores_;
+        std::vector<Semaphore> rayTracingFinishedSemaphores_;
         std::vector<Fence> inFlightFences_;
 
         std::vector<std::shared_ptr<GraphicsRender>> graphicsRenders_;
@@ -106,7 +113,7 @@ namespace estun
 
         GameInfo *gameInfo_;
 
-        uint32_t imageIndex_;
+        uint32_t imageIndex_ = 0;
         bool vsync_;
         uint32_t currentFrame_{};
         VkSampleCountFlagBits msaa_;

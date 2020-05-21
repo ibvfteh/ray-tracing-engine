@@ -38,7 +38,7 @@ estun::SwapChain::SwapChain(
     createInfo.oldSwapchain = nullptr;
 
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
-    
+
     if (indices.graphicsFamily != indices.presentFamily)
     {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;

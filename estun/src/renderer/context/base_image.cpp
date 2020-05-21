@@ -269,12 +269,12 @@ VkImage estun::BaseImage::GetImage() const
     return image;
 }
 
-uint32_t estun::BaseImage::GetWidth()
+uint32_t estun::BaseImage::GetWidth() const
 {
     return width_;
 }
 
-uint32_t estun::BaseImage::GetHeight()
+uint32_t estun::BaseImage::GetHeight() const
 {
     return height_;
 }

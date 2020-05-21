@@ -19,7 +19,8 @@ estun::Context::Context(GLFWwindow *windowHandle, GameInfo *gameInfo)
     DeviceLocator::Provide(device_.get());
     dynamicFunctions_.reset(new DynamicFunctions());
     FunctionsLocator::Provide(dynamicFunctions_.get());
-    RayTracingPropertiesLocator::Provide(new RayTracingProperties());
+    rayTracingProperties_.reset(new RayTracingProperties());
+    RayTracingPropertiesLocator::Provide(rayTracingProperties_.get());
     ES_CORE_INFO("Device done");
 
     graphicsCommandPool_.reset(new CommandPool(Graphics));
@@ -60,6 +61,7 @@ void estun::Context::CreateSwapChain()
         imageAvailableSemaphores_.emplace_back();
         renderFinishedSemaphores_.emplace_back();
         computeFinishedSemaphores_.emplace_back();
+        rayTracingFinishedSemaphores_.emplace_back();
         inFlightFences_.emplace_back(true);
     }
     ES_CORE_INFO("Semaphores done");
@@ -71,6 +73,7 @@ void estun::Context::DeleteSwapChain()
     renderFinishedSemaphores_.clear();
     imageAvailableSemaphores_.clear();
     computeFinishedSemaphores_.clear();
+    rayTracingFinishedSemaphores_.clear();
     swapChain_.reset();
 }
 
@@ -115,6 +118,81 @@ std::shared_ptr<estun::RayTracingRender> estun::Context::CreateRayTracingRender(
     return render;
 }
 
+void estun::Context::CopyImageToSwapChain(
+    VkCommandBuffer &commandBuffer,
+    std::shared_ptr<Image> image)
+{
+    image->Barrier(
+        commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    VkImageMemoryBarrier barrier1 = {};
+    barrier1.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier1.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier1.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier1.image = swapChain_->GetImages()[imageIndex_];
+    barrier1.subresourceRange.baseMipLevel = 0;
+    barrier1.subresourceRange.levelCount = 1;
+    barrier1.subresourceRange.baseArrayLayer = 0;
+    barrier1.subresourceRange.layerCount = 1;
+    barrier1.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier1.srcAccessMask = 0;
+    barrier1.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    auto sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    auto destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier1);
+    
+    VkImageCopy imageCopy = {};
+    imageCopy.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    imageCopy.srcOffset = {0, 0, 0};
+    imageCopy.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    imageCopy.dstOffset = {0, 0, 0};
+    imageCopy.extent = {image->GetImage().GetWidth(), image->GetImage().GetHeight(), 1};
+
+    vkCmdCopyImage(
+        commandBuffer,
+        image->GetImage().GetImage(), image->GetLayout(),
+        swapChain_->GetImages()[imageIndex_], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1, &imageCopy);
+
+    image->Barrier(
+        commandBuffer, VK_IMAGE_LAYOUT_GENERAL,
+        0, VK_ACCESS_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = swapChain_->GetImages()[imageIndex_];
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void estun::Context::WriteBuffers(const std::function<void()> &action)
+{
+    for (int currentFrame_ = 0; currentFrame_ < inFlightFences_.size(); currentFrame_++)
+    {
+        action();
+    }
+    currentFrame_ = 0;
+}
+
 void estun::Context::StartDraw()
 {
     const auto noTimeout = std::numeric_limits<uint64_t>::max();
@@ -144,6 +222,7 @@ void estun::Context::SubmitDraw()
     const auto imageAvailableSemaphore = imageAvailableSemaphores_[currentFrame_].GetSemaphore();
     const auto renderFinishedSemaphore = renderFinishedSemaphores_[currentFrame_].GetSemaphore();
     const auto computeFinishedSemaphore = computeFinishedSemaphores_[currentFrame_].GetSemaphore();
+    const auto rayTracingFinishedSemaphore = rayTracingFinishedSemaphores_[currentFrame_].GetSemaphore();
 
     std::vector<VkCommandBuffer> computeCommandBuffers;
     for (auto &render : computeRenders_)
@@ -167,6 +246,28 @@ void estun::Context::SubmitDraw()
 
     VK_CHECK_RESULT(vkQueueSubmit(device_->GetComputeQueue(), 1, &computeSubmitInfo, nullptr), "submit compute command buffers");
 
+    std::vector<VkCommandBuffer> rayTracingCommandBuffers;
+    for (auto &render : rayTracingRenders_)
+    {
+        rayTracingCommandBuffers.push_back(render->GetCurrCommandBuffer());
+    };
+
+    VkSemaphore rayTracingWaitSemaphores[] = {computeFinishedSemaphore};
+    VkPipelineStageFlags rayTracingWaitStages[] = {VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+    VkSemaphore rayTracingSignalSemaphores[] = {rayTracingFinishedSemaphore};
+
+    VkSubmitInfo rayTracingSubmitInfo = {};
+    rayTracingSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    rayTracingSubmitInfo.waitSemaphoreCount = 1;
+    rayTracingSubmitInfo.pWaitSemaphores = computeWaitSemaphores;
+    rayTracingSubmitInfo.pWaitDstStageMask = computeWaitStages;
+    rayTracingSubmitInfo.commandBufferCount = static_cast<uint32_t>(computeCommandBuffers.size());
+    rayTracingSubmitInfo.pCommandBuffers = computeCommandBuffers.data();
+    rayTracingSubmitInfo.signalSemaphoreCount = 1;
+    rayTracingSubmitInfo.pSignalSemaphores = computeSignalSemaphores;
+
+    VK_CHECK_RESULT(vkQueueSubmit(device_->GetComputeQueue(), 1, &rayTracingSubmitInfo, nullptr), "submit compute command buffers");
+
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -177,7 +278,7 @@ void estun::Context::SubmitDraw()
     {
         commandBuffers.push_back(render->GetCurrCommandBuffer());
     }
-    VkSemaphore waitSemaphores[] = {computeFinishedSemaphore};
+    VkSemaphore waitSemaphores[] = {rayTracingFinishedSemaphore};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
 
