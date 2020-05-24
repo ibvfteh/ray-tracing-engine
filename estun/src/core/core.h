@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstring>
 #include <cmath>
+#include <cstdlib>
 
 // Platform detection using predefined macros
 #ifdef _WIN32
@@ -76,7 +77,7 @@
 #if 1 //defined ES_DEBUG
 	// debugbreak
 	#if defined ES_PLATFORM_WINDOWS
-		#define ES_DEBUGBREAK() __debugbreak()
+		#define ES_DEBUGBREAK() system("pause"); __debugbreak()
 	#elif defined ES_PLATFORM_LINUX
 		#include <signal.h>
 		#define ES_DEBUGBREAK() raise(SIGTRAP)

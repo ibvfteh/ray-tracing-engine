@@ -35,7 +35,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     geometryTypeInfo.indexType = VK_INDEX_TYPE_NONE_KHR;
     geometryTypeInfo.maxVertexCount = 0;
     geometryTypeInfo.vertexFormat = VK_FORMAT_UNDEFINED;
-    geometryTypeInfo.allowsTransforms = false;
+    geometryTypeInfo.allowsTransforms = VK_FALSE;
 
     VkAccelerationStructureCreateInfoKHR structureCreateInfo = {};
     structureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -55,7 +55,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     std::shared_ptr<Buffer> scratchBuffer = std::make_shared<Buffer>(buildScratchSize_, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     std::shared_ptr<DeviceMemory> scratchMemory = std::make_shared<DeviceMemory>(scratchBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
 
-    VkAccelerationStructureDeviceAddressInfoKHR devAddrInfo;
+    VkAccelerationStructureDeviceAddressInfoKHR devAddrInfo = {};
     devAddrInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
     devAddrInfo.pNext = nullptr;
     devAddrInfo.accelerationStructure = accelerationStructure_;
@@ -89,6 +89,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     geometry.pNext = nullptr;
     geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
     geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    geometry.geometry = {};
     geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
     geometry.geometry.instances.pNext = nullptr;
     geometry.geometry.instances.arrayOfPointers = VK_FALSE;

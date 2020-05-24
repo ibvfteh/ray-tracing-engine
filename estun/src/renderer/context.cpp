@@ -187,11 +187,11 @@ void estun::Context::CopyImageToSwapChain(
 
 void estun::Context::WriteBuffers(const std::function<void()> &action)
 {
-    for (int currentFrame_ = 0; currentFrame_ < inFlightFences_.size(); currentFrame_++)
+    for (imageIndex_ = 0; imageIndex_ < swapChain_->GetImages().size(); imageIndex_++)
     {
         action();
     }
-    currentFrame_ = 0;
+    imageIndex_ = 0;
 }
 
 void estun::Context::StartDraw()
@@ -278,7 +278,7 @@ void estun::Context::SubmitDraw()
     {
         commandBuffers.push_back(render->GetCurrCommandBuffer());
     }
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
+    VkSemaphore waitSemaphores[] = { rayTracingFinishedSemaphore };
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
 

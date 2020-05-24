@@ -83,7 +83,8 @@ void estun::RayTracingRender::CopyImage(std::shared_ptr<Image> image1, std::shar
 
 VkCommandBuffer &estun::RayTracingRender::GetCurrCommandBuffer()
 {
-    return (*commandBuffers_)[ContextLocator::GetImageIndex()];
+    auto index = ContextLocator::GetImageIndex();
+    return (*commandBuffers_)[index];
 }
 
 /*
