@@ -66,7 +66,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     for (auto &blas : blases)
     {
         VkAccelerationStructureInstanceKHR geometryInstance = {};
-        std::memcpy(&geometryInstance.transform, &blas->GetTransformMatrix(), sizeof(glm::mat4)); //sizeof() бы приделать
+        std::memcpy(&geometryInstance.transform, blas->GetTransformMatrix(), sizeof(glm::mat4)); //sizeof() бы приделать
         geometryInstance.instanceCustomIndex = instanceId;
         geometryInstance.mask = 0xFF;
         geometryInstance.instanceShaderBindingTableRecordOffset = blas->GetHitGroup();

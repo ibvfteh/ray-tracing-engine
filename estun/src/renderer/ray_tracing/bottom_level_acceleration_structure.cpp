@@ -70,14 +70,13 @@ estun::BLAS::BLAS(
     geometry.geometry.triangles.transformData.deviceAddress = 0;
     geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
-    VkAccelerationStructureBuildOffsetInfoKHR buildOffsetInfo = {};
-    buildOffsetInfo.primitiveCount = indexCount;
-    buildOffsetInfo.primitiveOffset = indexOffset;
-    buildOffsetInfo.firstVertex = vertexOffset;
-    buildOffsetInfo.transformOffset = 0;
+    buildOffsetInfo_.primitiveCount = indexCount;
+    buildOffsetInfo_.primitiveOffset = indexOffset;
+    buildOffsetInfo_.firstVertex = vertexOffset;
+    buildOffsetInfo_.transformOffset = 0;
 
     accelerationGeometries_.push_back(geometry);
-    buildOffsets_.push_back(&buildOffsetInfo);
+    buildOffsets_.push_back(&buildOffsetInfo_);
 }
 
 void estun::BLAS::Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t blasOffset)

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "renderer/context/utils.h"
 
 std::string estun::ErrorString(VkResult errorCode)

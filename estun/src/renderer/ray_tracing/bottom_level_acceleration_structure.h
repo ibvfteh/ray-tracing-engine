@@ -34,7 +34,7 @@ namespace estun
         uint32_t GetSize() { return objectSize_; };
         VkDeviceAddress GetDeviceAddress();
         uint32_t GetHitGroup() { return hitGroup_; };
-        glm::mat4 GetTransformMatrix() { return transform_; };
+        glm::mat4* GetTransformMatrix() { return &transform_; };
         VkAccelerationStructureKHR GetStructure() { return accelerationStructure_; };
 
         static std::vector<std::shared_ptr<BLAS>> CreateBlases(std::vector<std::shared_ptr<Model>> models, std::shared_ptr<VertexBuffer> vertexBuffer, std::shared_ptr<IndexBuffer> indexBuffer);
@@ -47,6 +47,8 @@ namespace estun
         uint32_t hitGroup_;
         glm::mat4 transform_ = glm::mat4(1.0f);
         VkAccelerationStructureKHR accelerationStructure_;
+
+        VkAccelerationStructureBuildOffsetInfoKHR buildOffsetInfo_;
 
         std::vector<VkAccelerationStructureBuildOffsetInfoKHR *> buildOffsets_;
         std::vector<VkAccelerationStructureGeometryKHR> accelerationGeometries_;
