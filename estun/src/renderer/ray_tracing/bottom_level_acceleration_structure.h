@@ -32,16 +32,16 @@ namespace estun
         void Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t blasOffset);
 
         uint32_t GetSize() { return objectSize_; };
-        VkDeviceAddress GetDeviceAddress() { return deviceAddress_; };
+        VkDeviceAddress GetDeviceAddress();
         uint32_t GetHitGroup() { return hitGroup_; };
         glm::mat4 GetTransformMatrix() { return transform_; };
+        VkAccelerationStructureKHR GetStructure() { return accelerationStructure_; };
 
-        static std::vector<std::shared_ptr<BLAS>> &CreateBlases(std::vector<std::shared_ptr<Model>> models, std::shared_ptr<VertexBuffer> vertexBuffer, std::shared_ptr<IndexBuffer> indexBuffer);
+        static std::vector<std::shared_ptr<BLAS>> CreateBlases(std::vector<std::shared_ptr<Model>> models, std::shared_ptr<VertexBuffer> vertexBuffer, std::shared_ptr<IndexBuffer> indexBuffer);
 
     private:
         std::unique_ptr<Buffer> buffer_;
         std::unique_ptr<DeviceMemory> memory_;
-        VkDeviceAddress deviceAddress_;
         uint32_t buildScratchSize_;
         uint32_t objectSize_;
         uint32_t hitGroup_;

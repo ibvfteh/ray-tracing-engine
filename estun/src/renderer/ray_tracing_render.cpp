@@ -36,7 +36,7 @@ void estun::RayTracingRender::EndBuffer()
 
 void estun::RayTracingRender::Bind(std::shared_ptr<Descriptor> descriptor)
 {
-    descriptor->Bind(GetCurrCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE);
+    descriptor->Bind(GetCurrCommandBuffer(), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 }
 
 void estun::RayTracingRender::Bind(std::shared_ptr<RayTracingPipeline> pipeline)

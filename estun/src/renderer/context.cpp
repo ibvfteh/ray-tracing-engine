@@ -1,5 +1,6 @@
 #include "renderer/context.h"
 #include "renderer/context/image_memory_barier.h"
+#include "renderer/context/single_time_commands.h"
 
 estun::Context::Context(GLFWwindow *windowHandle, GameInfo *gameInfo)
 {
@@ -218,7 +219,6 @@ void estun::Context::StartDraw()
 
 void estun::Context::SubmitDraw()
 {
-
     const auto imageAvailableSemaphore = imageAvailableSemaphores_[currentFrame_].GetSemaphore();
     const auto renderFinishedSemaphore = renderFinishedSemaphores_[currentFrame_].GetSemaphore();
     const auto computeFinishedSemaphore = computeFinishedSemaphores_[currentFrame_].GetSemaphore();
@@ -253,18 +253,18 @@ void estun::Context::SubmitDraw()
     };
 
     VkSemaphore rayTracingWaitSemaphores[] = {computeFinishedSemaphore};
-    VkPipelineStageFlags rayTracingWaitStages[] = {VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+    VkPipelineStageFlags rayTracingWaitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore rayTracingSignalSemaphores[] = {rayTracingFinishedSemaphore};
 
     VkSubmitInfo rayTracingSubmitInfo = {};
     rayTracingSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     rayTracingSubmitInfo.waitSemaphoreCount = 1;
-    rayTracingSubmitInfo.pWaitSemaphores = computeWaitSemaphores;
-    rayTracingSubmitInfo.pWaitDstStageMask = computeWaitStages;
-    rayTracingSubmitInfo.commandBufferCount = static_cast<uint32_t>(computeCommandBuffers.size());
-    rayTracingSubmitInfo.pCommandBuffers = computeCommandBuffers.data();
+    rayTracingSubmitInfo.pWaitSemaphores = rayTracingWaitSemaphores;
+    rayTracingSubmitInfo.pWaitDstStageMask = rayTracingWaitStages;
+    rayTracingSubmitInfo.commandBufferCount = static_cast<uint32_t>(rayTracingCommandBuffers.size());
+    rayTracingSubmitInfo.pCommandBuffers = rayTracingCommandBuffers.data();
     rayTracingSubmitInfo.signalSemaphoreCount = 1;
-    rayTracingSubmitInfo.pSignalSemaphores = computeSignalSemaphores;
+    rayTracingSubmitInfo.pSignalSemaphores = rayTracingSignalSemaphores;
 
     VK_CHECK_RESULT(vkQueueSubmit(device_->GetComputeQueue(), 1, &rayTracingSubmitInfo, nullptr), "submit compute command buffers");
 
@@ -278,7 +278,7 @@ void estun::Context::SubmitDraw()
     {
         commandBuffers.push_back(render->GetCurrCommandBuffer());
     }
-    VkSemaphore waitSemaphores[] = {rayTracingFinishedSemaphore};
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
 

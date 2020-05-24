@@ -75,8 +75,8 @@ void estun::Image::Barrier(
     layout_ = newLayout;
     image_->SetLayout(newLayout);
 
-    sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 

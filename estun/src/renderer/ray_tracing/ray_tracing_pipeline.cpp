@@ -51,15 +51,15 @@ estun::RayTracingPipeline::RayTracingPipeline(
         }
         index++;
     }
-    if (!(closestHitShader == VK_SHADER_UNUSED_KHR) && !(anyHitShader == VK_SHADER_UNUSED_KHR))
+    if (!(closestHitShader == VK_SHADER_UNUSED_KHR) || !(anyHitShader == VK_SHADER_UNUSED_KHR))
     {
         VkRayTracingShaderGroupCreateInfoKHR groupInfo = {};
         groupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         groupInfo.pNext = nullptr;
-        groupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-        groupInfo.generalShader = index;
-        groupInfo.closestHitShader = VK_SHADER_UNUSED_KHR;
-        groupInfo.anyHitShader = VK_SHADER_UNUSED_KHR;
+        groupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+        groupInfo.generalShader = VK_SHADER_UNUSED_KHR;
+        groupInfo.closestHitShader = closestHitShader;
+        groupInfo.anyHitShader = anyHitShader;
         groupInfo.intersectionShader = VK_SHADER_UNUSED_KHR;
         shaderGroups.push_back(groupInfo);
     }

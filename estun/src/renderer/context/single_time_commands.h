@@ -59,8 +59,7 @@ public:
         submitInfo.pCommandBuffers = &commandBuffers[0];
 
         const auto queue = DeviceLocator::GetDevice().GetComputeQueue();
-
-        vkQueueSubmit(queue, 1, &submitInfo, fence.GetFence());
+        VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, fence.GetFence()), "to submit in queue");
         fence.Wait(UINT64_MAX);
         vkQueueWaitIdle(queue);
     }

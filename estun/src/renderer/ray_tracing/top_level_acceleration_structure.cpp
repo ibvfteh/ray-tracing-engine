@@ -32,7 +32,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     geometryTypeInfo.pNext = nullptr;
     geometryTypeInfo.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
     geometryTypeInfo.maxPrimitiveCount = blases.size();
-    geometryTypeInfo.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    geometryTypeInfo.indexType = VK_INDEX_TYPE_NONE_KHR;
     geometryTypeInfo.maxVertexCount = 0;
     geometryTypeInfo.vertexFormat = VK_FORMAT_UNDEFINED;
     geometryTypeInfo.allowsTransforms = false;
@@ -52,7 +52,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     buildScratchSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR);
     objectSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR);
 
-    std::shared_ptr<Buffer> scratchBuffer = std::make_shared<Buffer>(buildScratchSize_, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    std::shared_ptr<Buffer> scratchBuffer = std::make_shared<Buffer>(buildScratchSize_, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     std::shared_ptr<DeviceMemory> scratchMemory = std::make_shared<DeviceMemory>(scratchBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
 
     VkAccelerationStructureDeviceAddressInfoKHR devAddrInfo;
@@ -69,12 +69,20 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
         std::memcpy(&geometryInstance.transform, &blas->GetTransformMatrix(), sizeof(glm::mat4)); //sizeof() бы приделать
         geometryInstance.instanceCustomIndex = instanceId;
         geometryInstance.mask = 0xFF;
-        geometryInstance.instanceShaderBindingTableRecordOffset =  blas->GetHitGroup();
+        geometryInstance.instanceShaderBindingTableRecordOffset = blas->GetHitGroup();
         geometryInstance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; // Disable culling - more fine control could be provided by the application
         geometryInstance.accelerationStructureReference = blas->GetDeviceAddress();
         geometryInstances.push_back(geometryInstance);
         instanceId++;
     }
+
+    uint32_t instancesSize = geometryInstances.size() * sizeof(VkAccelerationStructureInstanceKHR);
+    std::shared_ptr<Buffer> instancesBuffer = std::make_shared<Buffer>(instancesSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    std::shared_ptr<DeviceMemory> instancesMemory = std::make_shared<DeviceMemory>(instancesBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
+
+    const auto data = instancesMemory->Map(0, instancesSize);
+    std::memcpy(data, geometryInstances.data(), instancesSize);
+    instancesMemory->Unmap();
 
     VkAccelerationStructureGeometryKHR geometry = {};
     geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -84,7 +92,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
     geometry.geometry.instances.pNext = nullptr;
     geometry.geometry.instances.arrayOfPointers = VK_FALSE;
-    geometry.geometry.instances.data.hostAddress = geometryInstances.data();
+    geometry.geometry.instances.data.deviceAddress = instancesBuffer->GetDeviceAddress();
 
     VkAccelerationStructureBuildOffsetInfoKHR buildOffsetInfo = {};
     buildOffsetInfo.primitiveCount = blases.size();
@@ -95,8 +103,8 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     accelerationGeometries_.push_back(geometry);
     buildOffsets_.push_back(&buildOffsetInfo);
 
-    std::shared_ptr<Buffer> tlasesBuffer = std::make_shared<Buffer>(objectSize_, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    std::shared_ptr<DeviceMemory> tlasesMemory = std::make_shared<DeviceMemory>(tlasesBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));  
+    std::shared_ptr<Buffer> tlasesBuffer = std::make_shared<Buffer>(objectSize_, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    std::shared_ptr<DeviceMemory> tlasesMemory = std::make_shared<DeviceMemory>(tlasesBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
 
     VkBindAccelerationStructureMemoryInfoKHR bindMemoryInfo = {};
     bindMemoryInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
@@ -109,7 +117,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkBindAccelerationStructureMemoryKHR(DeviceLocator::GetLogicalDevice(), 1, &bindMemoryInfo), "bind acceleration structure");
 
-    SingleTimeCommands::SubmitCompute(CommandPoolLocator::GetComputePool(), [this, scratchBuffer] (VkCommandBuffer commandBuffer) {
+    SingleTimeCommands::SubmitCompute(CommandPoolLocator::GetComputePool(), [this, scratchBuffer](VkCommandBuffer commandBuffer) {
         const VkAccelerationStructureGeometryKHR *pGeometries = accelerationGeometries_.data();
 
         VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
@@ -117,7 +125,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
         buildGeometryInfo.pNext = nullptr;
         buildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
         buildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        buildGeometryInfo.update = false;
+        buildGeometryInfo.update = VK_FALSE;
         buildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
         buildGeometryInfo.dstAccelerationStructure = accelerationStructure_;
         buildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
