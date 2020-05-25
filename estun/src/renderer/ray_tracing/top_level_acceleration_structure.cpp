@@ -118,7 +118,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkBindAccelerationStructureMemoryKHR(DeviceLocator::GetLogicalDevice(), 1, &bindMemoryInfo), "bind acceleration structure");
 
-    SingleTimeCommands::SubmitCompute(CommandPoolLocator::GetComputePool(), [this, scratchBuffer](VkCommandBuffer commandBuffer) {
+    SingleTimeCommands::SubmitCompute([this, scratchBuffer](VkCommandBuffer commandBuffer) {
         const VkAccelerationStructureGeometryKHR *pGeometries = accelerationGeometries_.data();
 
         VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
@@ -135,7 +135,7 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
         buildGeometryInfo.scratchData.deviceAddress = scratchBuffer->GetDeviceAddress();
 
         FunctionsLocator::GetFunctions().vkCmdBuildAccelerationStructureKHR(commandBuffer, 1, &buildGeometryInfo, buildOffsets_.data());
-    });
+    }, "create tlas");
 
     ES_CORE_INFO("TLAS created");
 }

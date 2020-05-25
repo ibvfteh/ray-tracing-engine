@@ -84,7 +84,7 @@ VkMemoryRequirements estun::BaseImage::GetMemoryRequirements() const
 void estun::BaseImage::TransitionImageLayout(const VkImageLayout &newLayout)
 {
 
-    SingleTimeCommands::SubmitCompute(CommandPoolLocator::GetComputePool(), [&](VkCommandBuffer commandBuffer) {
+    SingleTimeCommands::SubmitCompute([&](VkCommandBuffer commandBuffer) {
         VkImageMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout = layout_;
@@ -152,7 +152,7 @@ void estun::BaseImage::TransitionImageLayout(const VkImageLayout &newLayout)
         }
 
         vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    });
+    }, "image transition");
 
     layout_ = newLayout;
 }

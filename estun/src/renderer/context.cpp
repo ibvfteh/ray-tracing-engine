@@ -253,6 +253,7 @@ void estun::Context::SubmitDraw()
     };
 
     VkSemaphore rayTracingWaitSemaphores[] = {computeFinishedSemaphore};
+    //VkSemaphore rayTracingWaitSemaphores[] = {imageAvailableSemaphore };
     VkPipelineStageFlags rayTracingWaitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore rayTracingSignalSemaphores[] = {rayTracingFinishedSemaphore};
 
@@ -266,7 +267,7 @@ void estun::Context::SubmitDraw()
     rayTracingSubmitInfo.signalSemaphoreCount = 1;
     rayTracingSubmitInfo.pSignalSemaphores = rayTracingSignalSemaphores;
 
-    VK_CHECK_RESULT(vkQueueSubmit(device_->GetComputeQueue(), 1, &rayTracingSubmitInfo, nullptr), "submit compute command buffers");
+    VK_CHECK_RESULT(vkQueueSubmit(device_->GetComputeQueue(), 1, &rayTracingSubmitInfo, nullptr), "submit ray tracing command buffers");
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

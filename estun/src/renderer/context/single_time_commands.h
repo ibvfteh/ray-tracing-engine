@@ -38,9 +38,9 @@ public:
         vkQueueWaitIdle(queue);
     }
 
-    static void SubmitCompute(CommandPool &commandPool, const std::function<void(VkCommandBuffer)> &action)
+    static void SubmitCompute(const std::function<void(VkCommandBuffer)> &action, std::string name)
     {
-        CommandBuffers commandBuffers(commandPool, 1);
+        CommandBuffers commandBuffers(CommandPoolLocator::GetComputePool(), 1);
         Fence fence(false);
 
         VkCommandBufferBeginInfo beginInfo = {};
@@ -59,7 +59,7 @@ public:
         submitInfo.pCommandBuffers = &commandBuffers[0];
 
         const auto queue = DeviceLocator::GetDevice().GetComputeQueue();
-        VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, fence.GetFence()), "to submit in queue");
+        VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, fence.GetFence()), std::string("Failed to submit in queue with command: ") + name);
         fence.Wait(UINT64_MAX);
         vkQueueWaitIdle(queue);
     }

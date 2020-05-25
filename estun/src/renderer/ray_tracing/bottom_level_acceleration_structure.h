@@ -44,7 +44,7 @@ namespace estun
         std::unique_ptr<DeviceMemory> memory_;
         uint32_t buildScratchSize_;
         uint32_t objectSize_;
-        uint32_t hitGroup_;
+        uint32_t hitGroup_ = 0;
         glm::mat4 transform_ = glm::mat4(1.0f);
         VkAccelerationStructureKHR accelerationStructure_;
 

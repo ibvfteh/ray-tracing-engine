@@ -93,7 +93,7 @@ void estun::BLAS::Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t 
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkBindAccelerationStructureMemoryKHR(DeviceLocator::GetLogicalDevice(), 1, &bindMemoryInfo), "bind acceleration structure");
 
-    SingleTimeCommands::SubmitCompute(CommandPoolLocator::GetComputePool(), [this](VkCommandBuffer commandBuffer) {
+    SingleTimeCommands::SubmitCompute([this](VkCommandBuffer commandBuffer) {
         const VkAccelerationStructureGeometryKHR *pGeometries = accelerationGeometries_.data();
 
         VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
@@ -110,7 +110,7 @@ void estun::BLAS::Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t 
         buildGeometryInfo.scratchData.deviceAddress = buffer_->GetDeviceAddress();
 
         FunctionsLocator::GetFunctions().vkCmdBuildAccelerationStructureKHR(commandBuffer, 1, &buildGeometryInfo, buildOffsets_.data());
-    });
+    }, "create blas");
 }
 
 estun::BLAS::~BLAS()
