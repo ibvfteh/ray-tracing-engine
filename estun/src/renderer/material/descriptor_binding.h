@@ -55,6 +55,18 @@ struct DescriptorBinding
         std::vector<Descriptable*> descriptables = {storageBuffer.get()};
         return DescriptorBinding(binding, descriptables, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage);
     }
+    
+    static DescriptorBinding Storage(uint32_t binding, std::shared_ptr<IndexBuffer> indexBuffer, VkShaderStageFlags stage)
+    {
+        std::vector<Descriptable*> descriptables = {indexBuffer.get()};
+        return DescriptorBinding(binding, descriptables, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage);
+    }
+
+    static DescriptorBinding Storage(uint32_t binding, std::shared_ptr<VertexBuffer> vertexBuffer, VkShaderStageFlags stage)
+    {
+        std::vector<Descriptable*> descriptables = {vertexBuffer.get()};
+        return DescriptorBinding(binding, descriptables, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage);
+    }
 
     static DescriptorBinding Texture(uint32_t binding, Texture &texture, VkShaderStageFlags stage)
     {

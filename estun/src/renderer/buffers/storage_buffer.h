@@ -76,7 +76,7 @@ namespace estun
     {
     public:
         VertexBuffer(const std::vector<Vertex> &storage)
-            : StorageBuffer(storage, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {}
+            : StorageBuffer(storage, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {}
         void Bind(VkCommandBuffer &commandBuffer)
         {
             VkBuffer vertexBuffers[] = {buffer->GetBuffer()};
@@ -89,7 +89,7 @@ namespace estun
     {
     public:
         IndexBuffer(const std::vector<uint32_t> &storage)
-            : StorageBuffer(storage, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {}
+            : StorageBuffer(storage, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {}
         void Bind(VkCommandBuffer &commandBuffer)
         {
             const VkBuffer indexBuffer = buffer->GetBuffer();

@@ -18,7 +18,7 @@ float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
 
-Camera camera(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 void processInput(int key, int scancode, int action, int mods);
 void mouse_callback(double xpos, double ypos);
@@ -30,21 +30,28 @@ estun::WindowConfig winConf = {"Ray tracing", WIDTH, HEIGHT, "assets/textures/ic
 estun::GameInfo info("test", {0, 0, 1}, WIDTH, HEIGHT, true, false, true);
 std::unique_ptr<estun::Window> window;
 
-struct VertexUBO
+struct CameraUBO
 {
-    glm::mat4 modelView;
-    glm::mat4 projection;
-    glm::mat4 modelViewInverse;
-    glm::mat4 projectionInverse;
-    float aperture;
-    float focusDistance;
-    uint32_t totalNumberOfSamples;
-    uint32_t numberOfSamples;
-    uint32_t numberOfBounces;
-    uint32_t randomSeed;
-    uint32_t gammaCorrection;
-    uint32_t hasSky;
+    glm::vec4 camPos;
+    glm::vec4 camDir;
+    glm::vec4 camUp;
+    glm::vec4 camSide;
+    glm::vec4 camNearFarFov;
 };
+/*
+glm::mat4 modelView;
+glm::mat4 projection;
+glm::mat4 modelViewInverse;
+glm::mat4 projectionInverse;
+float aperture;
+float focusDistance;
+uint32_t totalNumberOfSamples;
+uint32_t numberOfSamples;
+uint32_t numberOfBounces;
+uint32_t randomSeed;
+uint32_t gammaCorrection;
+uint32_t hasSky;
+*/
 
 int surface_size = 256;
 float surface_scale = 10.0f;
@@ -64,7 +71,8 @@ int main(int argc, const char **argv)
     std::shared_ptr<estun::Context> context = std::make_shared<estun::Context>(window->GetWindow(), &info);
     estun::ContextLocator::Provide(context.get());
 
-    VertexUBO ubo = {};
+    CameraUBO camUBO = {};
+    /*
     ubo.aperture = 0.5f;
     ubo.focusDistance = 1.0f;
     ubo.totalNumberOfSamples = 0;
@@ -73,30 +81,43 @@ int main(int argc, const char **argv)
     ubo.randomSeed = 1;
     ubo.gammaCorrection = false;
     ubo.hasSky = false;
+    */
 
-    std::vector<estun::UniformBuffer<VertexUBO>> UBs(context->GetSwapChain()->GetImageViews().size());
+    std::vector<estun::UniformBuffer<CameraUBO>> camUBs(context->GetSwapChain()->GetImageViews().size());
     std::vector<std::shared_ptr<estun::Model>> models;
 
-    models.push_back(std::make_shared<estun::Model>(CornellBox::CreateCornellBox(1.0f)));
+    float box_scale = 2.0f;
+    models.push_back(std::make_shared<estun::Model>(CornellBox::CreateCornellBox(box_scale)));
+    models.back()->Transform(glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * box_scale, -0.5f * box_scale, 0.0f)));
 
-    estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.5f), -1);
 
-    //models.push_back(std::make_shared<estun::Model>(estun::Model::CreateBox(glm::vec3(0.0f), glm::vec3(0.5f), colorMaterial)));
+    estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.0f), -1);
+
+    models.push_back(std::make_shared<estun::Model>(estun::Model::CreateBox(glm::vec3(0.0f), glm::vec3(1.0f), colorMaterial)));
     glm::mat4 transform(1.0f);
     //transform = glm::rotate(transform, 40, glm::vec3(0.0f));
-    transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 2.0f));
+    transform = glm::translate(transform, glm::vec3(-0.5f, -0.5f, -2.0f));
     models.back()->Transform(transform);
 
     std::vector<estun::Texture> textures;
+    // If there are no texture, add a dummy one. It makes the pipeline setup a lot easier.
+    if (textures.empty())
+    {
+        textures.push_back(estun::Texture("assets/textures/white.png"));
+    }
 
     std::vector<estun::Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<estun::Material> materials;
+	std::vector<glm::uvec2> offsets;
 
     for (const auto &model : models)
     {
+		const auto indexOffset = static_cast<uint32_t>(indices.size());
         const auto vertexOffset = static_cast<uint32_t>(vertices.size());
         const auto materialOffset = static_cast<uint32_t>(materials.size());
+        
+		offsets.emplace_back(indexOffset, vertexOffset);
 
         vertices.insert(vertices.end(), model->GetVertices().begin(), model->GetVertices().end());
         indices.insert(indices.end(), model->GetIndices().begin(), model->GetIndices().end());
@@ -111,6 +132,7 @@ int main(int argc, const char **argv)
     std::shared_ptr<estun::VertexBuffer> VB = std::make_shared<estun::VertexBuffer>(vertices);
     std::shared_ptr<estun::IndexBuffer> IB = std::make_shared<estun::IndexBuffer>(indices);
     std::shared_ptr<estun::StorageBuffer<estun::Material>> materialBuffer = std::make_shared<estun::StorageBuffer<estun::Material>>(materials);
+    std::shared_ptr<estun::StorageBuffer<glm::uvec2>> offsetBuffer = std::make_shared<estun::StorageBuffer<glm::uvec2>>(offsets);
 
     std::vector<std::shared_ptr<estun::BLAS>> blases = estun::BLAS::CreateBlases(models, VB, IB);
     std::shared_ptr<estun::TLAS> tlas = std::make_shared<estun::TLAS>(blases);
@@ -121,7 +143,14 @@ int main(int argc, const char **argv)
 
     std::vector<estun::DescriptorBinding> descriptorBindings = {
         estun::DescriptorBinding::AccelerationStructure(0, tlas, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
-        estun::DescriptorBinding::StorageImage(1, storeImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR)};
+        estun::DescriptorBinding::StorageImage(1, storeImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
+        estun::DescriptorBinding::Uniform(2, camUBs, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
+        estun::DescriptorBinding::Storage(3, VB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(4, IB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(5, materialBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(6, offsetBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Textures(7, textures, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR)
+    };
 
     std::shared_ptr<estun::Descriptor> descriptor = std::make_shared<estun::Descriptor>(descriptorBindings, context->GetSwapChain()->GetImageViews().size());
     descriptorBindings.clear();
@@ -129,9 +158,9 @@ int main(int argc, const char **argv)
     std::shared_ptr<estun::RayTracingRender> render = context->CreateRayTracingRender();
     
     std::shared_ptr<estun::RayTracingPipeline> pipeline = render->CreatePipeline(
-        {{"assets/shaders/ray-generation.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-         {"assets/shaders/ray-miss.spv", VK_SHADER_STAGE_MISS_BIT_KHR},
-         {"assets/shaders/ray-closest-hit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR}},
+        {{"assets/shaders/main.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
+         {"assets/shaders/main.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR},
+         {"assets/shaders/main.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR}},
         descriptor);
     std::vector<uint32_t> v = {0, 1, 2};
     
@@ -155,7 +184,13 @@ int main(int argc, const char **argv)
 
         context->StartDraw();
 
-        UBs[context->GetImageIndex()].SetValue(ubo);
+        camUBO.camPos = glm::vec4(camera.Position, 1.0f);
+        camUBO.camDir = glm::vec4(camera.Front, 1.0f);
+        camUBO.camUp = glm::vec4(camera.Up, 1.0f);
+        camUBO.camSide = glm::vec4(camera.Right, 1.0f);
+        camUBO.camNearFarFov = glm::vec4(0.01f, 100.0f, glm::radians(camera.Zoom), 1.0f);
+
+        camUBs[context->GetImageIndex()].SetValue(camUBO);
 
         context->SubmitDraw();
     }
@@ -167,9 +202,11 @@ int main(int argc, const char **argv)
     tlas.reset();
     shaderBindingTable.reset();
     storeImage.reset();
-    UBs.clear();
+    camUBs.clear();
     VB.reset();
     IB.reset();
+    materialBuffer.reset();
+    offsetBuffer.reset();
     textures.clear();
     materialBuffer.reset();
     descriptor.reset();

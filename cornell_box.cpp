@@ -39,13 +39,13 @@ void CornellBox::Create(
 
 	const float s = scale;
 
-	const glm::vec3 l0(-s, -s, 0);
-	const glm::vec3 l1(-s, -s, -s);
-	const glm::vec3 l2(-s, s, -s);
-	const glm::vec3 l3(-s, s, 0);
+	const glm::vec3 l0(0, 0, 0);
+	const glm::vec3 l1(0, 0, -s);
+	const glm::vec3 l2(0, s, -s);
+	const glm::vec3 l3(0, s, 0);
 
-	const glm::vec3 r0(s, -s, 0);
-	const glm::vec3 r1(s, -s, -s);
+	const glm::vec3 r0(s, 0, 0);
+	const glm::vec3 r1(s, 0, -s);
 	const glm::vec3 r2(s, s, -s);
 	const glm::vec3 r3(s, s, 0);
 

@@ -234,6 +234,7 @@ void estun::Device::CreateLogicalDevice(estun::Instance *instance, estun::Surfac
     deviceVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
     deviceVulkan12Features.pNext = &deviceRayTracingFeatures;
     deviceVulkan12Features.bufferDeviceAddress = VK_TRUE;
+    deviceVulkan12Features.runtimeDescriptorArray = VK_TRUE;
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
