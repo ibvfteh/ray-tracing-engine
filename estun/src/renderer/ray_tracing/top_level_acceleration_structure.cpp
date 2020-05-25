@@ -6,7 +6,7 @@
 #include "renderer/context/dynamic_functions.h"
 #include "renderer/context/single_time_commands.h"
 
-uint32_t estun::TLAS::GetBufferSize(VkAccelerationStructureKHR accelerationStructure, VkAccelerationStructureMemoryRequirementsTypeKHR type)
+VkMemoryRequirements estun::TLAS::GetBufferMemoryRequirements(VkAccelerationStructureKHR accelerationStructure, VkAccelerationStructureMemoryRequirementsTypeKHR type)
 {
     VkMemoryRequirements2 memoryRequirements2;
     memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
@@ -20,7 +20,7 @@ uint32_t estun::TLAS::GetBufferSize(VkAccelerationStructureKHR accelerationStruc
     accelerationMemoryRequirements.accelerationStructure = accelerationStructure;
     FunctionsLocator::GetFunctions().vkGetAccelerationStructureMemoryRequirementsKHR(DeviceLocator::GetLogicalDevice(), &accelerationMemoryRequirements, &memoryRequirements2);
 
-    return memoryRequirements2.memoryRequirements.size;
+    return memoryRequirements2.memoryRequirements;
 }
 
 estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
@@ -49,11 +49,13 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkCreateAccelerationStructureKHR(DeviceLocator::GetLogicalDevice(), &structureCreateInfo, nullptr, &accelerationStructure_), "create acceleration structure");
 
-    buildScratchSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR);
-    objectSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR);
+   
+    auto tlasMemoryRequirements = GetBufferMemoryRequirements(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR);
+    buildScratchSize_ = GetBufferMemoryRequirements(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR).size;
+    objectSize_ = tlasMemoryRequirements.size;
 
     std::shared_ptr<Buffer> scratchBuffer = std::make_shared<Buffer>(buildScratchSize_, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    std::shared_ptr<DeviceMemory> scratchMemory = std::make_shared<DeviceMemory>(scratchBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
+    std::shared_ptr<DeviceMemory> scratchMemory = std::make_shared<DeviceMemory>(scratchBuffer->AllocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true));
 
     VkAccelerationStructureDeviceAddressInfoKHR devAddrInfo = {};
     devAddrInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
@@ -104,14 +106,13 @@ estun::TLAS::TLAS(std::vector<std::shared_ptr<estun::BLAS>> blases)
     accelerationGeometries_.push_back(geometry);
     buildOffsets_.push_back(&buildOffsetInfo);
 
-    std::shared_ptr<Buffer> tlasesBuffer = std::make_shared<Buffer>(objectSize_, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    std::shared_ptr<DeviceMemory> tlasesMemory = std::make_shared<DeviceMemory>(tlasesBuffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
+    tlasMemory_.reset(new DeviceMemory(objectSize_, tlasMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true));
 
     VkBindAccelerationStructureMemoryInfoKHR bindMemoryInfo = {};
     bindMemoryInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
     bindMemoryInfo.pNext = nullptr;
     bindMemoryInfo.accelerationStructure = accelerationStructure_;
-    bindMemoryInfo.memory = tlasesMemory->GetMemory();
+    bindMemoryInfo.memory = tlasMemory_->GetMemory();
     bindMemoryInfo.memoryOffset = 0;
     bindMemoryInfo.deviceIndexCount = 0;
     bindMemoryInfo.pDeviceIndices = nullptr;

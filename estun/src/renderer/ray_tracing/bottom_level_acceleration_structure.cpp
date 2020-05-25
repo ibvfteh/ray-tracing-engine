@@ -5,7 +5,7 @@
 #include "renderer/context/dynamic_functions.h"
 #include "renderer/context/single_time_commands.h"
 
-uint32_t estun::BLAS::GetBufferSize(VkAccelerationStructureKHR accelerationStructure, VkAccelerationStructureMemoryRequirementsTypeKHR type)
+VkMemoryRequirements estun::BLAS::GetBufferMemoryRequirements(VkAccelerationStructureKHR accelerationStructure, VkAccelerationStructureMemoryRequirementsTypeKHR type)
 {
     VkMemoryRequirements2 memoryRequirements2;
     memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
@@ -19,7 +19,7 @@ uint32_t estun::BLAS::GetBufferSize(VkAccelerationStructureKHR accelerationStruc
     accelerationMemoryRequirements.accelerationStructure = accelerationStructure;
     FunctionsLocator::GetFunctions().vkGetAccelerationStructureMemoryRequirementsKHR(DeviceLocator::GetLogicalDevice(), &accelerationMemoryRequirements, &memoryRequirements2);
 
-    return memoryRequirements2.memoryRequirements.size;
+    return memoryRequirements2.memoryRequirements;
 }
 
 estun::BLAS::BLAS(
@@ -49,11 +49,12 @@ estun::BLAS::BLAS(
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkCreateAccelerationStructureKHR(DeviceLocator::GetLogicalDevice(), &structureCreateInfo, nullptr, &accelerationStructure_), "create acceleration structure");
 
-    buildScratchSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR);
-    objectSize_ = GetBufferSize(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR);
+    auto blasMemoryRequirements = GetBufferMemoryRequirements(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR);
+    buildScratchSize_ = GetBufferMemoryRequirements(accelerationStructure_, VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR).size;
+    objectSize_ = blasMemoryRequirements.size;
 
-    buffer_.reset(new Buffer(buildScratchSize_, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT));
-    memory_.reset(new DeviceMemory(buffer_->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true)));
+    std::shared_ptr<Buffer> scratchBuffer = std::make_shared<Buffer>(buildScratchSize_, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    std::shared_ptr<DeviceMemory> scratchMemory = std::make_shared<DeviceMemory>(scratchBuffer->AllocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true));
 
     VkAccelerationStructureGeometryKHR geometry = {};
     geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -70,30 +71,29 @@ estun::BLAS::BLAS(
     geometry.geometry.triangles.transformData.deviceAddress = 0;
     geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
-    buildOffsetInfo_.primitiveCount = indexCount;
-    buildOffsetInfo_.primitiveOffset = indexOffset;
-    buildOffsetInfo_.firstVertex = vertexOffset;
-    buildOffsetInfo_.transformOffset = 0;
+    VkAccelerationStructureBuildOffsetInfoKHR buildOffsetInfo = {};
+    buildOffsetInfo.primitiveCount = indexCount;
+    buildOffsetInfo.primitiveOffset = indexOffset;
+    buildOffsetInfo.firstVertex = vertexOffset;
+    buildOffsetInfo.transformOffset = 0;
 
     accelerationGeometries_.push_back(geometry);
-    buildOffsets_.push_back(&buildOffsetInfo_);
-}
-
-void estun::BLAS::Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t blasOffset)
-{
+    buildOffsets_.push_back(&buildOffsetInfo);
+    
+    blasMemory_.reset(new DeviceMemory(objectSize_, blasMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true));
 
     VkBindAccelerationStructureMemoryInfoKHR bindMemoryInfo = {};
     bindMemoryInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
     bindMemoryInfo.pNext = nullptr;
     bindMemoryInfo.accelerationStructure = accelerationStructure_;
-    bindMemoryInfo.memory = blasesMemory->GetMemory();
-    bindMemoryInfo.memoryOffset = blasOffset;
+    bindMemoryInfo.memory = blasMemory_->GetMemory();
+    bindMemoryInfo.memoryOffset = 0;
     bindMemoryInfo.deviceIndexCount = 0;
     bindMemoryInfo.pDeviceIndices = nullptr;
 
     VK_CHECK_RESULT(FunctionsLocator::GetFunctions().vkBindAccelerationStructureMemoryKHR(DeviceLocator::GetLogicalDevice(), 1, &bindMemoryInfo), "bind acceleration structure");
 
-    SingleTimeCommands::SubmitCompute([this](VkCommandBuffer commandBuffer) {
+    SingleTimeCommands::SubmitCompute([this, scratchBuffer](VkCommandBuffer commandBuffer) {
         const VkAccelerationStructureGeometryKHR *pGeometries = accelerationGeometries_.data();
 
         VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
@@ -107,16 +107,16 @@ void estun::BLAS::Generate(std::shared_ptr<DeviceMemory> blasesMemory, uint32_t 
         buildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
         buildGeometryInfo.geometryCount = 1;
         buildGeometryInfo.ppGeometries = &pGeometries;
-        buildGeometryInfo.scratchData.deviceAddress = buffer_->GetDeviceAddress();
+        buildGeometryInfo.scratchData.deviceAddress = scratchBuffer->GetDeviceAddress();
 
         FunctionsLocator::GetFunctions().vkCmdBuildAccelerationStructureKHR(commandBuffer, 1, &buildGeometryInfo, buildOffsets_.data());
     }, "create blas");
 }
 
+
 estun::BLAS::~BLAS()
 {
-    buffer_.reset();
-    memory_.reset();
+    blasMemory_.reset();
     if (accelerationStructure_ != nullptr)
     {
         FunctionsLocator::GetFunctions().vkDestroyAccelerationStructureKHR(DeviceLocator::GetLogicalDevice(), accelerationStructure_, nullptr);
@@ -157,16 +157,6 @@ std::vector<std::shared_ptr<estun::BLAS>> estun::BLAS::CreateBlases(
 
         vertexOffset += vertexCount * sizeof(Vertex);
         indexOffset += indexCount * sizeof(uint32_t);
-    }
-
-    std::shared_ptr<Buffer> buffer = std::make_shared<Buffer>(size, VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    std::shared_ptr<DeviceMemory> memory = std::make_shared<DeviceMemory>(buffer->AllocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true));
-
-    uint32_t offset = 0;
-    for (auto &blas : blases)
-    {
-        blas->Generate(memory, offset);
-        offset += blases.back()->GetSize();
     }
 
     ES_CORE_INFO("BLASes created");

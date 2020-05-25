@@ -8,8 +8,8 @@
 #include "cornell_box.h"
 #include "renderer/context/single_time_commands.h"
 
-#define WIDTH 600
-#define HEIGHT 400
+#define WIDTH 1200
+#define HEIGHT 800
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -78,6 +78,14 @@ int main(int argc, const char **argv)
     std::vector<std::shared_ptr<estun::Model>> models;
 
     models.push_back(std::make_shared<estun::Model>(CornellBox::CreateCornellBox(1.0f)));
+
+    estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.5f), -1);
+
+    //models.push_back(std::make_shared<estun::Model>(estun::Model::CreateBox(glm::vec3(0.0f), glm::vec3(0.5f), colorMaterial)));
+    glm::mat4 transform(1.0f);
+    //transform = glm::rotate(transform, 40, glm::vec3(0.0f));
+    transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 2.0f));
+    models.back()->Transform(transform);
 
     std::vector<estun::Texture> textures;
 
