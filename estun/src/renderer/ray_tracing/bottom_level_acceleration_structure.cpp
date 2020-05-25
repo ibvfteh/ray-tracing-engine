@@ -31,7 +31,7 @@ estun::BLAS::BLAS(
     geometryTypeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
     geometryTypeInfo.pNext = nullptr;
     geometryTypeInfo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    geometryTypeInfo.maxPrimitiveCount = indexCount;
+    geometryTypeInfo.maxPrimitiveCount = indexCount / 3;
     geometryTypeInfo.indexType = VK_INDEX_TYPE_UINT32;
     geometryTypeInfo.maxVertexCount = vertexCount;
     geometryTypeInfo.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
@@ -72,7 +72,7 @@ estun::BLAS::BLAS(
     geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
     VkAccelerationStructureBuildOffsetInfoKHR buildOffsetInfo = {};
-    buildOffsetInfo.primitiveCount = indexCount;
+    buildOffsetInfo.primitiveCount = indexCount / 3;
     buildOffsetInfo.primitiveOffset = indexOffset;
     buildOffsetInfo.firstVertex = vertexOffset;
     buildOffsetInfo.transformOffset = 0;
@@ -145,7 +145,6 @@ std::vector<std::shared_ptr<estun::BLAS>> estun::BLAS::CreateBlases(
 
     uint32_t vertexOffset = 0;
     uint32_t indexOffset = 0;
-    uint32_t size = 0;
 
     for (auto &model : models)
     {
@@ -153,9 +152,8 @@ std::vector<std::shared_ptr<estun::BLAS>> estun::BLAS::CreateBlases(
         const uint32_t indexCount = static_cast<uint32_t>(model->SizeOfIndices());
 
         blases.push_back(std::make_shared<BLAS>(vertexBuffer, indexBuffer, vertexCount, indexCount, vertexOffset, indexOffset));
-        size += blases.back()->GetSize();
 
-        vertexOffset += vertexCount * sizeof(Vertex);
+        vertexOffset += vertexCount;
         indexOffset += indexCount * sizeof(uint32_t);
     }
 

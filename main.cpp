@@ -6,7 +6,6 @@
 #include "tiny_obj_loader.h"
 
 #include "cornell_box.h"
-#include "renderer/context/single_time_commands.h"
 
 #define WIDTH 1200
 #define HEIGHT 800
@@ -86,20 +85,24 @@ int main(int argc, const char **argv)
     std::vector<estun::UniformBuffer<CameraUBO>> camUBs(context->GetSwapChain()->GetImageViews().size());
     std::vector<std::shared_ptr<estun::Model>> models;
 
-    float box_scale = 2.0f;
+    float box_scale = 3.0f;
     models.push_back(std::make_shared<estun::Model>(CornellBox::CreateCornellBox(box_scale)));
     models.back()->Transform(glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * box_scale, -0.5f * box_scale, 0.0f)));
 
 
-    estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.0f), -1);
+    estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.5f), -1);
 
-    models.push_back(std::make_shared<estun::Model>(estun::Model::CreateBox(glm::vec3(0.0f), glm::vec3(1.0f), colorMaterial)));
+    models.push_back(std::make_shared<estun::Model>(estun::Model::CreateBox(glm::vec3(0.0f), glm::vec3(0.8f, 1.5f, 0.8f), colorMaterial)));
     glm::mat4 transform(1.0f);
-    //transform = glm::rotate(transform, 40, glm::vec3(0.0f));
-    transform = glm::translate(transform, glm::vec3(-0.5f, -0.5f, -2.0f));
+    transform = glm::rotate(transform, glm::radians(25.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    transform = glm::translate(transform, glm::vec3(-0.2f * box_scale, -0.5f * box_scale, -2.0f));
+    models.back()->Transform(transform);
+    models.push_back(std::make_shared<estun::Model>(estun::Model::CreateSphere(glm::vec3(0.0f), 0.4f, colorMaterial)));
+    transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.2f * box_scale, -0.5f * box_scale + 0.4f, -2.0f));
     models.back()->Transform(transform);
 
     std::vector<estun::Texture> textures;
+
     // If there are no texture, add a dummy one. It makes the pipeline setup a lot easier.
     if (textures.empty())
     {
@@ -162,8 +165,8 @@ int main(int argc, const char **argv)
          {"assets/shaders/main.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR},
          {"assets/shaders/main.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR}},
         descriptor);
+
     std::vector<uint32_t> v = {0, 1, 2};
-    
     std::shared_ptr<estun::ShaderBindingTable> shaderBindingTable = std::make_shared<estun::ShaderBindingTable>(pipeline, v);
 
     context->WriteBuffers([&]() {
