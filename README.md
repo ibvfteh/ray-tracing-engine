@@ -1,6 +1,6 @@
 # Vulkan ray tracing engine
 
-![Preview](picture1.png)
+![Preview](picture1.PNG)
 
 Implementation of real-time ray tracing engine based on Vulkan API with KHR ray tracing support
 
