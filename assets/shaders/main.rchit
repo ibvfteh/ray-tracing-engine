@@ -2,7 +2,14 @@
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(location = 0) rayPayloadInEXT vec3 resultColor;
+struct RayPayload
+{
+	vec4 colorAndDistance; 
+	vec4 scatterDirection; 
+	uint randomSeed;
+};
+
+layout(location = 0) rayPayloadInEXT RayPayload ray;
 
 const uint MaterialLambertian = 0;
 
@@ -23,11 +30,11 @@ struct Vertex
   int  materialIndex;
 };
 
-layout(binding = 3) readonly buffer VertexArray { float Vertices[]; };
-layout(binding = 4) readonly buffer IndexArray { uint Indices[]; };
-layout(binding = 5) readonly buffer MaterialArray { Material[] Materials; };
-layout(binding = 6) readonly buffer OffsetArray { uvec2[] Offsets; };
-layout(binding = 7) uniform sampler2D[] TextureSamplers;
+layout(binding = 4) readonly buffer VertexArray { float Vertices[]; };
+layout(binding = 5) readonly buffer IndexArray { uint Indices[]; };
+layout(binding = 6) readonly buffer MaterialArray { Material[] Materials; };
+layout(binding = 7) readonly buffer OffsetArray { uvec2[] Offsets; };
+layout(binding = 8) uniform sampler2D[] TextureSamplers;
 
 hitAttributeEXT vec2 hitAttribs;
 
@@ -56,6 +63,42 @@ vec3 Mix(vec3 a, vec3 b, vec3 c, vec3 barycentrics)
     return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
 }
 
+uint RandomInt(inout uint seed)
+{
+    return (seed = 1664525 * seed + 1013904223);
+}
+
+float RandomFloat(inout uint seed)
+{
+	const uint one = 0x3f800000;
+	const uint msk = 0x007fffff;
+	return uintBitsToFloat(one | (msk & (RandomInt(seed) >> 9))) - 1;
+}
+
+vec2 RandomInUnitDisk(inout uint seed)
+{
+	for (;;)
+	{
+		const vec2 p = 2 * vec2(RandomFloat(seed), RandomFloat(seed)) - 1;
+		if (dot(p, p) < 1)
+		{
+			return p;
+		}
+	}
+}
+
+vec3 RandomInUnitSphere(inout uint seed)
+{
+	for (;;)
+	{
+		const vec3 p = 2 * vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed)) - 1;
+		if (dot(p, p) < 1)
+		{
+			return p;
+		}
+	}
+}
+
 void main() {    
 	// Get the material.
 	const uvec2 offsets = Offsets[gl_InstanceCustomIndexEXT];
@@ -71,8 +114,11 @@ void main() {
 	const vec3 normal = normalize(Mix(v0.normal, v1.normal, v2.normal, barycentrics));
 	const vec2 texCoord = Mix(v0.texCoord, v1.texCoord, v2.texCoord, barycentrics);
     
+    uint seed = ray.randomSeed;
+	const bool isScattered = dot(gl_WorldRayDirectionEXT, normal) < 0;
 	const vec4 texColor = material.DiffuseTextureId >= 0 ? texture(TextureSamplers[material.DiffuseTextureId], texCoord) : vec4(1);
-	const vec3 color = vec3(material.Diffuse.rgb * texColor.rgb);
+	const vec4 color = vec4(material.Diffuse.rgb * texColor.rgb, gl_HitTEXT);
+	const vec4 scatter = vec4(normal + RandomInUnitSphere(seed), isScattered ? 1 : 0);
     
-    resultColor = color;
+    ray = RayPayload(color, scatter, seed);
 }

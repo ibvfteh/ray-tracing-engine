@@ -1,8 +1,15 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-layout(location = 0) rayPayloadInEXT vec3 resultColor;
+struct RayPayload
+{
+	vec4 colorAndDistance; 
+	vec4 scatterDirection; 
+	uint randomSeed;
+};
+
+layout(location = 0) rayPayloadInEXT RayPayload ray;
 
 void main() {
-    resultColor = vec3(0.3);
+    ray.colorAndDistance = vec4(vec3(0.3), -1);
 }

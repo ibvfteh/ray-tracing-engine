@@ -36,6 +36,9 @@ struct CameraUBO
     glm::vec4 camUp;
     glm::vec4 camSide;
     glm::vec4 camNearFarFov;
+    uint32_t totalNumberOfSamples;
+    uint32_t numberOfSamples;
+    uint32_t numberOfBounces;
 };
 /*
 glm::mat4 modelView;
@@ -56,6 +59,10 @@ int surface_size = 256;
 float surface_scale = 10.0f;
 bool wireframe = false;
 
+uint32_t maxNumberOfSamples = 4096;
+uint32_t numberOfSamples = 4;
+bool restartSampling = true;
+
 int main(int argc, const char **argv)
 {
     estun::Log::Init();
@@ -71,6 +78,9 @@ int main(int argc, const char **argv)
     estun::ContextLocator::Provide(context.get());
 
     CameraUBO camUBO = {};
+    camUBO.numberOfBounces = 4;
+    camUBO.totalNumberOfSamples = 0;
+    camUBO.numberOfSamples = 0;
     /*
     ubo.aperture = 0.5f;
     ubo.focusDistance = 1.0f;
@@ -88,7 +98,6 @@ int main(int argc, const char **argv)
     float box_scale = 3.0f;
     models.push_back(std::make_shared<estun::Model>(CornellBox::CreateCornellBox(box_scale)));
     models.back()->Transform(glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * box_scale, -0.5f * box_scale, 0.0f)));
-
 
     estun::Material colorMaterial = estun::Material::Lambertian(glm::vec3(0.5f, 0.5f, 0.5f), -1);
 
@@ -112,15 +121,15 @@ int main(int argc, const char **argv)
     std::vector<estun::Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<estun::Material> materials;
-	std::vector<glm::uvec2> offsets;
+    std::vector<glm::uvec2> offsets;
 
     for (const auto &model : models)
     {
-		const auto indexOffset = static_cast<uint32_t>(indices.size());
+        const auto indexOffset = static_cast<uint32_t>(indices.size());
         const auto vertexOffset = static_cast<uint32_t>(vertices.size());
         const auto materialOffset = static_cast<uint32_t>(materials.size());
-        
-		offsets.emplace_back(indexOffset, vertexOffset);
+
+        offsets.emplace_back(indexOffset, vertexOffset);
 
         vertices.insert(vertices.end(), model->GetVertices().begin(), model->GetVertices().end());
         indices.insert(indices.end(), model->GetIndices().begin(), model->GetIndices().end());
@@ -141,25 +150,27 @@ int main(int argc, const char **argv)
     std::shared_ptr<estun::TLAS> tlas = std::make_shared<estun::TLAS>(blases);
 
     auto extent = estun::ContextLocator::GetSwapChain()->GetExtent();
-    std::shared_ptr<estun::Image> storeImage = estun::Image::CreateStorageImage(extent.width, extent.height);
+    std::shared_ptr<estun::Image> storeImage = estun::Image::CreateStorageImage(extent.width, extent.height, estun::ContextLocator::GetSwapChain()->GetFormat());
     storeImage->ToLayout(VK_IMAGE_LAYOUT_GENERAL);
+    std::shared_ptr<estun::Image> accumulationImage = estun::Image::CreateStorageImage(extent.width, extent.height, VK_FORMAT_R32G32B32A32_SFLOAT);
+    accumulationImage->ToLayout(VK_IMAGE_LAYOUT_GENERAL);
 
     std::vector<estun::DescriptorBinding> descriptorBindings = {
         estun::DescriptorBinding::AccelerationStructure(0, tlas, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
         estun::DescriptorBinding::StorageImage(1, storeImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
-        estun::DescriptorBinding::Uniform(2, camUBs, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
-        estun::DescriptorBinding::Storage(3, VB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
-        estun::DescriptorBinding::Storage(4, IB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
-        estun::DescriptorBinding::Storage(5, materialBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
-        estun::DescriptorBinding::Storage(6, offsetBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
-        estun::DescriptorBinding::Textures(7, textures, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR)
-    };
+        estun::DescriptorBinding::StorageImage(2, accumulationImage, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
+        estun::DescriptorBinding::Uniform(3, camUBs, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
+        estun::DescriptorBinding::Storage(4, VB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(5, IB, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(6, materialBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Storage(7, offsetBuffer, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+        estun::DescriptorBinding::Textures(8, textures, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR)};
 
     std::shared_ptr<estun::Descriptor> descriptor = std::make_shared<estun::Descriptor>(descriptorBindings, context->GetSwapChain()->GetImageViews().size());
     descriptorBindings.clear();
 
     std::shared_ptr<estun::RayTracingRender> render = context->CreateRayTracingRender();
-    
+
     std::shared_ptr<estun::RayTracingPipeline> pipeline = render->CreatePipeline(
         {{"assets/shaders/main.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
          {"assets/shaders/main.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR},
@@ -180,6 +191,16 @@ int main(int argc, const char **argv)
 
     while (!glfwWindowShouldClose(window->GetWindow()))
     {
+        if (restartSampling)
+        {
+            camUBO.numberOfSamples = 0;
+            camUBO.totalNumberOfSamples = 0;
+            restartSampling = false;
+        }
+
+        camUBO.numberOfSamples = glm::clamp(maxNumberOfSamples - camUBO.totalNumberOfSamples, 0u, numberOfSamples);
+        camUBO.totalNumberOfSamples += camUBO.numberOfSamples;
+
         float currFrame = window->Time();
         deltaTime = lastFrame - currFrame;
         lastFrame = currFrame;
@@ -205,6 +226,7 @@ int main(int argc, const char **argv)
     tlas.reset();
     shaderBindingTable.reset();
     storeImage.reset();
+    accumulationImage.reset();
     camUBs.clear();
     VB.reset();
     IB.reset();
@@ -222,6 +244,7 @@ bool cursor = false;
 
 void processInput(int key, int scancode, int action, int mods)
 {
+    restartSampling = true;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         window->Close();
     if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT) && !cursor)
@@ -244,6 +267,7 @@ void processInput(int key, int scancode, int action, int mods)
 
 void mouse_callback(double xpos, double ypos)
 {
+    restartSampling = true;
     if (firstMouse)
     {
         lastX = xpos;
@@ -262,6 +286,7 @@ void mouse_callback(double xpos, double ypos)
 
 void scroll_callback(double xoffset, double yoffset)
 {
+    restartSampling = true;
     camera.ProcessMouseScroll(yoffset);
 }
 

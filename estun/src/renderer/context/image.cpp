@@ -33,12 +33,12 @@ estun::Image::~Image()
     sampler_.reset();
 }
 
-std::shared_ptr<estun::Image> estun::Image::CreateStorageImage(const uint32_t width, const uint32_t height)
+std::shared_ptr<estun::Image> estun::Image::CreateStorageImage(const uint32_t width, const uint32_t height, VkFormat format)
 {
     return std::make_shared<estun::Image>(
         width, height,
         VK_SAMPLE_COUNT_1_BIT,
-        ContextLocator::GetSwapChain()->GetFormat(),
+        format,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT);

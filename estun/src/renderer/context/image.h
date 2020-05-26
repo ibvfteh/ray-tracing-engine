@@ -25,7 +25,7 @@ namespace estun
                     VkImageAspectFlags aspectFlags);
         ~Image();
 
-        static std::shared_ptr<Image> CreateStorageImage(const uint32_t width, const uint32_t height);
+        static std::shared_ptr<Image> CreateStorageImage(const uint32_t width, const uint32_t height, VkFormat format);
 
         DescriptableInfo GetInfo() override;
         void ToLayout(const VkImageLayout &newLayout);
