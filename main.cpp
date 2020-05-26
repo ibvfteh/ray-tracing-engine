@@ -8,7 +8,7 @@
 
 #include "cornell_box.h"
 
-#define WIDTH 1200
+#define WIDTH 800
 #define HEIGHT 800
 
 float deltaTime = 0.0f;

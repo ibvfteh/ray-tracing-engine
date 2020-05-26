@@ -23,7 +23,7 @@ struct UniformBufferObject
 	uint numberOfBounces;
 };
 
-layout(binding = 0) uniform accelerationStructureEXT acc;
+layout(binding = 0, set = 0) uniform accelerationStructureEXT acc;
 layout(binding = 1, rgba32f) uniform image2D outImage; 
 layout(binding = 2, rgba32f) uniform image2D accImage; 
 layout(binding = 3, std140) uniform UniformBufferObjectStruct { UniformBufferObject UBO; };
