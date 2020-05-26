@@ -244,30 +244,46 @@ bool cursor = false;
 
 void processInput(int key, int scancode, int action, int mods)
 {
-    restartSampling = true;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         window->Close();
     if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT) && !cursor)
+    {
         camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (!cursor)
+            restartSampling = true;
+    }
     if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT) && !cursor)
+    {
         camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (!cursor)
+            restartSampling = true;
+    }
     if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT) && !cursor)
+    {
         camera.ProcessKeyboard(LEFT, deltaTime);
+        if (!cursor)
+            restartSampling = true;
+    }
     if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT) && !cursor)
+    {
         camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (!cursor)
+            restartSampling = true;
+    }
     if (key == GLFW_KEY_Q && action == GLFW_PRESS)
         wireframe = !wireframe;
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
         window->ToggleCursor(!cursor);
         cursor = !cursor;
-        ES_CORE_INFO(cursor);
     }
 }
 
 void mouse_callback(double xpos, double ypos)
 {
-    restartSampling = true;
+    if (!cursor)
+        restartSampling = true;
+
     if (firstMouse)
     {
         lastX = xpos;
@@ -281,12 +297,15 @@ void mouse_callback(double xpos, double ypos)
     lastX = xpos;
     lastY = ypos;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    if (!cursor)
+        camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 void scroll_callback(double xoffset, double yoffset)
 {
-    restartSampling = true;
+    if (!cursor)
+        restartSampling = true;
+
     camera.ProcessMouseScroll(yoffset);
 }
 

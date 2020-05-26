@@ -64,8 +64,8 @@ file(GLOB_RECURSE SOURCE_FILES
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 
 #add_library(estun STATIC ${HEADER_FILES} ${SOURCE_FILES})
-add_executable(sim ${HEADER_FILES} ${SOURCE_FILES})
+add_executable(raytracing ${HEADER_FILES} ${SOURCE_FILES})
 
-target_link_libraries(sim ${ALL_LIBS} glfw imgui stbi tinyobjloader)
+target_link_libraries(raytracing ${ALL_LIBS} glfw imgui stbi tinyobjloader)
 
 file (COPY assets/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/assets)
