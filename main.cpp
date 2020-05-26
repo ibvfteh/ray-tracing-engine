@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include "tiny_obj_loader.h"
+#include "time.h"
 
 #include "cornell_box.h"
 
@@ -189,8 +190,16 @@ int main(int argc, const char **argv)
         render->EndBuffer();
     });
 
+    uint32_t fps = 0;
+    double timeSum = 0;
+
     while (!glfwWindowShouldClose(window->GetWindow()))
     {
+        float currFrame = window->Time();
+        deltaTime = currFrame - lastFrame;
+        lastFrame = currFrame;
+        glfwPollEvents();
+
         if (restartSampling)
         {
             camUBO.numberOfSamples = 0;
@@ -200,11 +209,6 @@ int main(int argc, const char **argv)
 
         camUBO.numberOfSamples = glm::clamp(maxNumberOfSamples - camUBO.totalNumberOfSamples, 0u, numberOfSamples);
         camUBO.totalNumberOfSamples += camUBO.numberOfSamples;
-
-        float currFrame = window->Time();
-        deltaTime = lastFrame - currFrame;
-        lastFrame = currFrame;
-        glfwPollEvents();
 
         context->StartDraw();
 
@@ -217,6 +221,15 @@ int main(int argc, const char **argv)
         camUBs[context->GetImageIndex()].SetValue(camUBO);
 
         context->SubmitDraw();
+
+        timeSum += deltaTime;
+        fps++;
+        if (timeSum >= 1.0f)
+        {
+            ES_CORE_INFO(std::to_string(fps));
+            fps = 0;
+            timeSum = 0;
+        }
     }
 
     pipeline.reset();
