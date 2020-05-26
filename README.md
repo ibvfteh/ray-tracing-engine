@@ -24,7 +24,7 @@ make
 - **Escape** - Close window
 
 ## References
-* [Vulkan Tutorial]https://vulkan-tutorial.com/
-* [SaschaWillems projects]https://github.com/SaschaWillems/Vulkan
-* [GPSnoopys project]https://github.com/GPSnoopy/RayTracingInVulkan
-* [Iorange tutorial]https://iorange.github.io/
+* [Vulkan Tutorial](https://vulkan-tutorial.com/)
+* [SaschaWillems projects](https://github.com/SaschaWillems/Vulkan)
+* [GPSnoopys project](https://github.com/GPSnoopy/RayTracingInVulkan)
+* [Iorange tutorial](https://iorange.github.io/)
