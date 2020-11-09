@@ -11,5 +11,5 @@ struct RayPayload
 layout(location = 0) rayPayloadInEXT RayPayload ray;
 
 void main() {
-    ray.colorAndDistance = vec4(vec3(0.3), -1);
+    ray.colorAndDistance = vec4(vec3(0.0), -1);
 }

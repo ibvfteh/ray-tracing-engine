@@ -16,10 +16,10 @@ estun::RayTracingRender::~RayTracingRender()
 }
 
 std::shared_ptr<estun::RayTracingPipeline> estun::RayTracingRender::CreatePipeline(
-    const std::vector<Shader> shaders,
+    const std::vector<std::vector<Shader>> shaderGroups,
     const std::shared_ptr<Descriptor> descriptor)
 {
-    std::shared_ptr<RayTracingPipeline> pipeline = std::make_shared<RayTracingPipeline>(shaders, descriptor);
+    std::shared_ptr<RayTracingPipeline> pipeline = std::make_shared<RayTracingPipeline>(shaderGroups, descriptor);
     pipelines_.push_back(pipeline);
     return pipeline;
 }
@@ -49,7 +49,7 @@ void estun::RayTracingRender::TraceRays(std::shared_ptr<ShaderBindingTable> sbta
     const VkStridedBufferRegionKHR raygenShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetRayGenOffset(), sbtable->GetRayGenEntrySize(), sbtable->GetSize()};
     const VkStridedBufferRegionKHR missShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetMissOffset(), sbtable->GetMissEntrySize(), sbtable->GetSize()};
     const VkStridedBufferRegionKHR hitShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetHitGroupOffset(), sbtable->GetHitGroupEntrySize(), sbtable->GetSize()};
-    const VkStridedBufferRegionKHR callableShaderBindingTable = {};
+    const VkStridedBufferRegionKHR callableShaderBindingTable = {sbtable->GetBuffer().GetBuffer(), sbtable->GetCallableOffset(), sbtable->GetCallableEntrySize(), sbtable->GetSize()};
 
     FunctionsLocator::GetFunctions().vkCmdTraceRaysKHR(
         GetCurrCommandBuffer(),

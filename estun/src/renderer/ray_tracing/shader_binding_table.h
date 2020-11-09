@@ -19,8 +19,7 @@ namespace estun
         ShaderBindingTable &operator=(ShaderBindingTable &&) = delete;
 
         ShaderBindingTable(
-            const std::shared_ptr<RayTracingPipeline> rayTracingPipeline,
-            std::vector<uint32_t> programs);
+            const std::shared_ptr<RayTracingPipeline> rayTracingPipeline);
 
         ~ShaderBindingTable();
 
@@ -29,10 +28,12 @@ namespace estun
         size_t GetRayGenOffset() const { return rayGenOffset_; }
         size_t GetMissOffset() const { return missOffset_; }
         size_t GetHitGroupOffset() const { return hitGroupOffset_; }
+        size_t GetCallableOffset() const { return callOffset_; }
 
         size_t GetRayGenEntrySize() const { return rayGenEntrySize_; }
         size_t GetMissEntrySize() const { return missEntrySize_; }
         size_t GetHitGroupEntrySize() const { return hitGroupEntrySize_; }
+        size_t GetCallableEntrySize() const { return callEntrySize_; }
 
         
         size_t GetSize() const { return sbtSize_; }
@@ -41,10 +42,12 @@ namespace estun
         size_t rayGenEntrySize_;
         size_t missEntrySize_;
         size_t hitGroupEntrySize_;
+        size_t callEntrySize_;
 
         size_t rayGenOffset_;
         size_t missOffset_;
         size_t hitGroupOffset_;
+        size_t callOffset_;
 
         size_t sbtSize_;
 

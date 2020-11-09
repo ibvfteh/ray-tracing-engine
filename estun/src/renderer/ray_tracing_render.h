@@ -38,7 +38,7 @@ namespace estun
         ~RayTracingRender();
 
         std::shared_ptr<RayTracingPipeline> CreatePipeline(
-            const std::vector<Shader> shaders,
+            const std::vector<std::vector<Shader>> shaderGroups,
             const std::shared_ptr<Descriptor> descriptor);
 
         void BeginBuffer();

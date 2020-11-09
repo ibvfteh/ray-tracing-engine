@@ -126,6 +126,8 @@ void main()
 
 	pixelColor = accumulatedColor / UBO.totalNumberOfSamples;
 
+    pixelColor = sqrt(pixelColor);
+
     imageStore(accImage, ivec2(gl_LaunchIDEXT), vec4(accumulatedColor, 1.0f));
     imageStore(outImage, ivec2(gl_LaunchIDEXT), vec4(pixelColor, 1.0f));
 }

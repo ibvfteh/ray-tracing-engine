@@ -13,6 +13,14 @@ namespace estun
     class Descriptor;
     class DescriptorBinding;
 
+    enum ShaderGroups
+    {
+        RayGen = 0,
+        Miss = 1,
+        Hit = 2,
+        Call = 3,
+    };
+
     class RayTracingPipeline
     {
     public:
@@ -22,16 +30,13 @@ namespace estun
         RayTracingPipeline &operator=(RayTracingPipeline &&) = delete;
 
         RayTracingPipeline(
-            const std::vector<Shader> shaders,
+            const std::vector<std::vector<Shader>> shaderGroups,
             const std::shared_ptr<Descriptor> descriptor);
         ~RayTracingPipeline();
 
         void Bind(VkCommandBuffer &commandBuffer);
-
-        uint32_t RayGenShaderIndex() const { return rayGenIndex_; }
-        uint32_t MissShaderIndex() const { return missIndex_; }
-        uint32_t TriangleHitGroupIndex() const { return triangleHitGroupIndex_; }
-        uint32_t ProceduralHitGroupIndex() const { return proceduralHitGroupIndex_; }
+        
+        uint32_t GetGroupCount() const { return !rayGenGroups.empty() + !missGroups.empty() + !hitGroups.empty() + !callGroups.empty(); }
 
         VkDescriptorSet DescriptorSet(uint32_t index) const;
 
@@ -40,10 +45,10 @@ namespace estun
     private:
         VkPipeline pipeline_;
 
-        uint32_t rayGenIndex_;
-        uint32_t missIndex_;
-        uint32_t triangleHitGroupIndex_;
-        uint32_t proceduralHitGroupIndex_;
+        std::vector<uint32_t> rayGenGroups = {};
+        std::vector<uint32_t> missGroups = {};
+        std::vector<uint32_t> hitGroups = {};
+        std::vector<uint32_t> callGroups = {};
     };
 
 } // namespace estun
